@@ -11,7 +11,8 @@ import SwiftUI
 struct Couples_CalendarApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
+                .preferredColorScheme(.dark)
         }
     }
 }
