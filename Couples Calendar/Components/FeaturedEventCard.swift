@@ -7,23 +7,35 @@ struct FeaturedEventCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Image placeholder
+            // Image area
             ZStack(alignment: .topTrailing) {
-                ZStack {
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                colors: gradientColors(for: event.category),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-
-                    Image(systemName: event.category.icon)
-                        .font(.system(size: 40))
-                        .foregroundStyle(.white.opacity(0.3))
+                Group {
+                    if let imageURL = event.imageURL, let url = URL(string: imageURL) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 240, height: 160)
+                                    .clipped()
+                            case .failure:
+                                fallbackImageView
+                            case .empty:
+                                RoundedRectangle(cornerRadius: 0)
+                                    .fill(AppTheme.cardBackground)
+                                    .frame(width: 240, height: 160)
+                                    .shimmering()
+                            @unknown default:
+                                fallbackImageView
+                            }
+                        }
+                    } else {
+                        fallbackImageView
+                    }
                 }
-                .frame(height: 160)
+                .frame(width: 240, height: 160)
+                .clipped()
 
                 Button(action: onSave) {
                     Image(systemName: isSaved ? "heart.fill" : "heart")
@@ -52,27 +64,57 @@ struct FeaturedEventCard: View {
                 .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
 
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 11))
+                    Text(event.formattedDate)
+                        .font(.system(size: 13))
+                }
+                .foregroundStyle(AppTheme.textSecondary)
+
+                if let showCount = event.showCountLabel {
+                    Text(showCount)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(AppTheme.pink.opacity(0.8))
+                        .clipShape(Capsule())
+                }
+
+                Spacer(minLength: 0)
+
                 HStack {
-                    HStack(spacing: 4) {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 11))
-                        Text(event.formattedDate)
-                            .font(.system(size: 13))
-                    }
-                    .foregroundStyle(AppTheme.textSecondary)
-
-                    Spacer()
-
                     Text(event.price)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(AppTheme.pink)
+                    Spacer()
                 }
             }
             .padding(14)
+            .frame(maxHeight: .infinity)
         }
         .background(AppTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .frame(width: 240)
+        .frame(width: 240, height: 340)
+    }
+
+    private var fallbackImageView: some View {
+        ZStack {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: gradientColors(for: event.category),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            Image(systemName: event.category.icon)
+                .font(.system(size: 40))
+                .foregroundStyle(.white.opacity(0.3))
+        }
+        .frame(height: 160)
     }
 
     private func gradientColors(for category: EventCategory) -> [Color] {

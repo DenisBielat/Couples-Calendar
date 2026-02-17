@@ -15,6 +15,9 @@ struct ExploreView: View {
                 // Category filter chips
                 categoryChips
 
+                // Date filter chips
+                dateFilterChips
+
                 // Featured Date Ideas
                 if !viewModel.featuredEvents.isEmpty {
                     featuredSection
@@ -26,9 +29,7 @@ struct ExploreView: View {
                 }
 
                 // Community Events
-                if !viewModel.communityEvents.isEmpty {
-                    communitySection
-                }
+                communitySection
 
                 // Quick Date Ideas
                 quickIdeasSection
@@ -37,7 +38,21 @@ struct ExploreView: View {
             }
             .padding(.top, 8)
         }
+        .refreshable {
+            await viewModel.refresh()
+        }
+        .task {
+            await viewModel.loadData()
+        }
         .background(AppTheme.background)
+        .sheet(isPresented: $viewModel.showDatePicker) {
+            DateRangePickerSheet(
+                startDate: $viewModel.customStartDate,
+                endDate: $viewModel.customEndDate,
+                onApply: { viewModel.applyCustomDateRange() },
+                onDismiss: { viewModel.showDatePicker = false }
+            )
+        }
     }
 
     // MARK: - Header
@@ -117,24 +132,77 @@ struct ExploreView: View {
         }
     }
 
+    // MARK: - Date Filter Chips
+
+    private var dateFilterChips: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(DateFilter.allCases) { filter in
+                        DateFilterChipView(
+                            filter: filter,
+                            isSelected: viewModel.selectedDateFilter == filter
+                        ) {
+                            viewModel.selectDateFilter(filter)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+
+            // Show the custom date label when custom filter is active
+            if let label = viewModel.dateFilterLabel {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 12))
+                    Text(label)
+                        .font(.system(size: 13, weight: .medium))
+                    Button {
+                        viewModel.showDatePicker = true
+                    } label: {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 14))
+                    }
+                }
+                .foregroundStyle(AppTheme.pink)
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
     // MARK: - Featured Section
 
     private var featuredSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader("Featured Date Ideas") {}
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(viewModel.featuredEvents) { event in
-                        FeaturedEventCard(
-                            event: event,
-                            isSaved: viewModel.isEventSaved(event.id)
-                        ) {
-                            viewModel.toggleSaved(eventID: event.id)
+            if viewModel.isLoadingFeatured && viewModel.featuredEventsFromAPI.isEmpty {
+                // Loading skeleton
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(AppTheme.cardBackground)
+                                .frame(width: 240, height: 240)
+                                .shimmering()
                         }
                     }
+                    .padding(.horizontal, 20)
                 }
-                .padding(.horizontal, 20)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(viewModel.featuredEvents) { event in
+                            FeaturedEventCard(
+                                event: event,
+                                isSaved: viewModel.isEventSaved(event.id)
+                            ) {
+                                viewModel.toggleSaved(eventID: event.id, source: event.source)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
             }
         }
     }
@@ -160,12 +228,69 @@ struct ExploreView: View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader("Community Events") {}
 
-            VStack(spacing: 12) {
-                ForEach(viewModel.communityEvents) { event in
-                    CommunityEventCard(event: event)
+            if viewModel.isLoadingCommunity {
+                // Skeleton loading placeholders
+                VStack(spacing: 12) {
+                    ForEach(0..<2, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(AppTheme.cardBackground)
+                            .frame(height: 160)
+                            .shimmering()
+                    }
                 }
+                .padding(.horizontal, 20)
+            } else if let error = viewModel.communityError {
+                // Error state
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 32))
+                        .foregroundStyle(AppTheme.pink)
+
+                    Text("Couldn't load community events")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(AppTheme.textPrimary)
+
+                    Text(error)
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+
+                    Button {
+                        Task { await viewModel.loadCommunityEvents() }
+                    } label: {
+                        Text("Try Again")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 10)
+                            .background(AppTheme.pinkGradient)
+                            .clipShape(Capsule())
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+                .padding(.horizontal, 20)
+            } else if viewModel.communityEvents.isEmpty {
+                // Empty state
+                VStack(spacing: 8) {
+                    Text("No community events yet")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    Text("Check back soon!")
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppTheme.textTertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(viewModel.communityEvents) { event in
+                        CommunityEventCard(event: event)
+                    }
+                }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
         }
     }
 
