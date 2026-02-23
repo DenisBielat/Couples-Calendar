@@ -218,6 +218,10 @@ struct MockData {
         )
     ]
 
+    static let dateCompositions: [DateComposition] = MockDateCompositions.all
+    static let featuredCompositions: [DateComposition] = MockDateCompositions.featured
+    static let tonightCompositions: [DateComposition] = MockDateCompositions.tonight
+
     static let quickDateIdeas: [QuickDateIdea] = [
         QuickDateIdea(id: "q1", emoji: "\u{2615}", title: "Coffee Date"),
         QuickDateIdea(id: "q2", emoji: "\u{1F3DE}", title: "Picnic"),

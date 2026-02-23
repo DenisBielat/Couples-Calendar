@@ -62,7 +62,7 @@ enum DateFilter: String, CaseIterable, Identifiable {
 
 // MARK: - Event Category
 
-enum EventCategory: String, CaseIterable, Identifiable {
+enum EventCategory: String, CaseIterable, Identifiable, Codable {
     case all = "All"
     case concerts = "Concerts"
     case comedy = "Comedy"
@@ -70,6 +70,8 @@ enum EventCategory: String, CaseIterable, Identifiable {
     case food = "Food"
     case theater = "Theater"
     case classes = "Classes"
+    case sports = "Sports"
+    case movies = "Movies"
 
     var id: String { rawValue }
 
@@ -82,6 +84,8 @@ enum EventCategory: String, CaseIterable, Identifiable {
         case .food: return "fork.knife"
         case .theater: return "theatermasks"
         case .classes: return "paintpalette"
+        case .sports: return "sportscourt"
+        case .movies: return "film"
         }
     }
 }

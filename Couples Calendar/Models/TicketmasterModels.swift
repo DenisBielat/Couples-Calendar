@@ -90,8 +90,8 @@ struct TicketmasterEvent: Decodable, Identifiable {
         switch segment {
         case "music": return .concerts
         case "arts & theatre", "arts & theater": return .theater
-        case "sports": return .outdoors
-        case "film": return .theater
+        case "sports": return .sports
+        case "film": return .movies
         default: return .concerts
         }
     }

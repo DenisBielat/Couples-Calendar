@@ -18,14 +18,14 @@ struct ExploreView: View {
                 // Date filter chips
                 dateFilterChips
 
-                // Featured Date Ideas
-                if !viewModel.featuredEvents.isEmpty {
-                    featuredSection
+                // Date Night Ideas (composed dates)
+                if !viewModel.displayedFeaturedCompositions.isEmpty {
+                    featuredCompositionSection
                 }
 
-                // Tonight
-                if !viewModel.tonightEvents.isEmpty {
-                    tonightSection
+                // Tonight (composed dates)
+                if !viewModel.displayedTonightCompositions.isEmpty {
+                    tonightCompositionSection
                 }
 
                 // Community Events
@@ -64,7 +64,7 @@ struct ExploreView: View {
                     .font(.system(size: 32, weight: .bold))
                     .foregroundStyle(AppTheme.textPrimary)
 
-                Text("Find your next date night")
+                Text("Plan your perfect date")
                     .font(.system(size: 15))
                     .foregroundStyle(AppTheme.textSecondary)
             }
@@ -170,20 +170,21 @@ struct ExploreView: View {
         }
     }
 
-    // MARK: - Featured Section
+    // MARK: - Featured Compositions Section
 
-    private var featuredSection: some View {
+    private var featuredCompositionSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionHeader("Featured Date Ideas") {}
+            SectionHeader("Date Night Ideas") {}
 
-            if viewModel.isLoadingFeatured && viewModel.featuredEventsFromAPI.isEmpty {
+            if (viewModel.isLoadingFeatured || viewModel.isLoadingCompositions)
+                && viewModel.featuredCompositions.isEmpty {
                 // Loading skeleton
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 16) {
                         ForEach(0..<3, id: \.self) { _ in
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(AppTheme.cardBackground)
-                                .frame(width: 240, height: 240)
+                                .frame(width: 240, height: 340)
                                 .shimmering()
                         }
                     }
@@ -192,12 +193,12 @@ struct ExploreView: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 16) {
-                        ForEach(viewModel.featuredEvents) { event in
-                            FeaturedEventCard(
-                                event: event,
-                                isSaved: viewModel.isEventSaved(event.id)
+                        ForEach(viewModel.displayedFeaturedCompositions) { composition in
+                            DateCompositionCard(
+                                composition: composition,
+                                isSaved: viewModel.isCompositionSaved(composition.id)
                             ) {
-                                viewModel.toggleSaved(eventID: event.id, source: event.source)
+                                viewModel.toggleSavedComposition(composition)
                             }
                         }
                     }
@@ -207,19 +208,79 @@ struct ExploreView: View {
         }
     }
 
-    // MARK: - Tonight Section
+    // MARK: - Tonight Compositions Section
 
-    private var tonightSection: some View {
+    private var tonightCompositionSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader("Tonight") {}
 
             VStack(spacing: 10) {
-                ForEach(viewModel.tonightEvents) { event in
-                    CompactEventRow(event: event)
+                ForEach(viewModel.displayedTonightCompositions) { composition in
+                    tonightCompositionRow(composition)
                 }
             }
             .padding(.horizontal, 20)
         }
+    }
+
+    private func tonightCompositionRow(_ composition: DateComposition) -> some View {
+        HStack(spacing: 14) {
+            // Category icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppTheme.cardBackgroundLight)
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: composition.category.icon)
+                    .font(.system(size: 18))
+                    .foregroundStyle(AppTheme.pink)
+            }
+
+            // Composition info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(composition.title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(1)
+
+                HStack(spacing: 4) {
+                    // Step indicator dots
+                    ForEach(Array(composition.steps.sorted { $0.order < $1.order }.enumerated()), id: \.element.id) { index, step in
+                        Circle()
+                            .fill(step.role == .main ? AppTheme.pink : AppTheme.textTertiary)
+                            .frame(width: 4, height: 4)
+                        if index < composition.steps.count - 1 {
+                            Rectangle()
+                                .fill(AppTheme.textTertiary.opacity(0.4))
+                                .frame(width: 6, height: 1)
+                        }
+                    }
+
+                    Text("\(composition.stepCount) stops")
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+
+            Spacer()
+
+            // Cost and duration
+            VStack(alignment: .trailing, spacing: 4) {
+                if let duration = composition.totalDuration {
+                    Text(duration)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+
+                Text(composition.estimatedCost.formattedRange)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(AppTheme.pink)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Community Section
