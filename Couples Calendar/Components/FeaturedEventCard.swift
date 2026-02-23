@@ -125,6 +125,8 @@ struct FeaturedEventCard: View {
         case .food: return [Color(hex: "C44B2B"), Color(hex: "8B3520")]
         case .theater: return [Color(hex: "8B2252"), Color(hex: "5C1636")]
         case .classes: return [Color(hex: "2B6BC4"), Color(hex: "1A4480")]
+        case .sports: return [Color(hex: "1B7A3D"), Color(hex: "0E4D26")]
+        case .movies: return [Color(hex: "B8860B"), Color(hex: "6B4E08")]
         case .all: return [Color(hex: "6B2FA0"), Color(hex: "3B1F6E")]
         }
     }

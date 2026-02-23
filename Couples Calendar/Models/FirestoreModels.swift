@@ -11,6 +11,7 @@ struct UserProfile: Codable, Identifiable {
     var interests: [String]
     var location: GeoPoint?
     var partnerId: String?
+    var preferences: UserPreferences?
     var createdAt: Timestamp
 
     init(
@@ -21,6 +22,7 @@ struct UserProfile: Codable, Identifiable {
         interests: [String] = [],
         location: GeoPoint? = nil,
         partnerId: String? = nil,
+        preferences: UserPreferences? = nil,
         createdAt: Timestamp = Timestamp(date: Date())
     ) {
         self.id = id
@@ -30,6 +32,7 @@ struct UserProfile: Codable, Identifiable {
         self.interests = interests
         self.location = location
         self.partnerId = partnerId
+        self.preferences = preferences
         self.createdAt = createdAt
     }
 }

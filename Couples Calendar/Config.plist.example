@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>TICKETMASTER_API_KEY</key>
+	<string>YOUR_TICKETMASTER_KEY_HERE</string>
+	<key>TMDB_API_KEY</key>
+	<string>YOUR_TMDB_KEY_HERE</string>
+	<key>WEATHER_API_KEY</key>
+	<string>YOUR_WEATHER_KEY_HERE</string>
+	<key>GOOGLE_PLACES_API_KEY</key>
+	<string>YOUR_GOOGLE_PLACES_KEY_HERE</string>
+</dict>
+</plist>

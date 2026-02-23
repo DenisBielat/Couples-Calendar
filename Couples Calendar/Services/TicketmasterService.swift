@@ -176,9 +176,11 @@ final class TicketmasterService {
         case .concerts: return "Music"
         case .comedy: return "Comedy"
         case .theater: return "Theatre"
-        case .outdoors: return "Sports"
-        case .food: return nil // Not well covered by Ticketmaster
-        case .classes: return nil // Not covered by Ticketmaster
+        case .sports: return "Sports"
+        case .outdoors: return nil
+        case .food: return nil
+        case .classes: return nil
+        case .movies: return nil
         }
     }
 

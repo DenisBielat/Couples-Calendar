@@ -20,6 +20,12 @@ final class ExploreViewModel {
     // Community events from Firestore
     var communityEventsFromFirestore: [Event] = []
 
+    // DateComposition data (new track)
+    var featuredCompositions: [DateComposition] = []
+    var tonightCompositions: [DateComposition] = []
+    var savedCompositionIDs: Set<String> = []
+    var isLoadingCompositions: Bool = false
+
     // Loading & error states
     var isLoadingFeatured: Bool = false
     var isLoadingTonight: Bool = false
@@ -83,6 +89,29 @@ final class ExploreViewModel {
 
     var quickDateIdeas: [QuickDateIdea] {
         MockData.quickDateIdeas
+    }
+
+    // MARK: - Composition Computed Properties
+
+    var displayedFeaturedCompositions: [DateComposition] {
+        let compositions = featuredCompositions.isEmpty
+            ? MockData.featuredCompositions
+            : featuredCompositions
+        return filterCompositions(compositions)
+    }
+
+    var displayedTonightCompositions: [DateComposition] {
+        if selectedDateFilter != .anytime && selectedDateFilter != .today {
+            return []
+        }
+        let compositions = tonightCompositions.isEmpty
+            ? MockData.tonightCompositions
+            : tonightCompositions
+        return filterCompositions(compositions)
+    }
+
+    func isCompositionSaved(_ compositionID: String) -> Bool {
+        savedCompositionIDs.contains(compositionID)
     }
 
     // MARK: - Actions
@@ -163,6 +192,42 @@ final class ExploreViewModel {
         savedEventIDs.contains(eventID)
     }
 
+    func toggleSavedComposition(_ composition: DateComposition) {
+        let wasSaved = savedCompositionIDs.contains(composition.id)
+
+        // Optimistic UI update
+        if wasSaved {
+            savedCompositionIDs.remove(composition.id)
+        } else {
+            savedCompositionIDs.insert(composition.id)
+        }
+
+        Task {
+            do {
+                if wasSaved {
+                    try await SavedDateService.shared.unsaveDate(
+                        coupleId: placeholderCoupleId,
+                        compositionId: composition.id
+                    )
+                } else {
+                    try await SavedDateService.shared.saveDate(
+                        coupleId: placeholderCoupleId,
+                        composition: composition,
+                        userId: placeholderUserId
+                    )
+                }
+            } catch {
+                // Revert on failure
+                if wasSaved {
+                    savedCompositionIDs.insert(composition.id)
+                } else {
+                    savedCompositionIDs.remove(composition.id)
+                }
+                print("Failed to toggle composition save: \(error.localizedDescription)")
+            }
+        }
+    }
+
     // MARK: - Data Loading
 
     func loadData() async {
@@ -178,6 +243,18 @@ final class ExploreViewModel {
             group.addTask { await self.loadTonightEvents() }
             group.addTask { await self.loadCommunityEvents() }
             group.addTask { await self.loadSavedEvents() }
+        }
+
+        // After events are loaded, compose date experiences
+        await loadCompositions()
+
+        // Load saved composition IDs
+        do {
+            savedCompositionIDs = try await SavedDateService.shared.fetchSavedDateIDs(
+                coupleId: placeholderCoupleId
+            )
+        } catch {
+            print("Failed to load saved dates: \(error.localizedDescription)")
         }
     }
 
@@ -313,5 +390,31 @@ final class ExploreViewModel {
             return events
         }
         return events.filter { $0.hasDateInRange(start: range.start, end: range.end) }
+    }
+
+    private func filterCompositions(_ compositions: [DateComposition]) -> [DateComposition] {
+        if selectedCategory == .all { return compositions }
+        return compositions.filter { $0.category == selectedCategory }
+    }
+
+    // MARK: - Composition Loading
+
+    func loadCompositions() async {
+        isLoadingCompositions = true
+
+        // Ensure templates are loaded
+        do {
+            try await TemplateService.shared.seedDefaultTemplates()
+            _ = try await TemplateService.shared.fetchTemplates()
+        } catch {
+            print("Template loading failed: \(error.localizedDescription)")
+        }
+
+        // Compose from existing events
+        let engine = CompositionEngine.shared
+        featuredCompositions = engine.composeAll(from: featuredEventsFromAPI)
+        tonightCompositions = engine.composeAll(from: tonightEventsFromAPI)
+
+        isLoadingCompositions = false
     }
 }
